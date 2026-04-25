@@ -7,7 +7,7 @@ const { matchOwnership, renderTemplate } = require('./match');
 const { upsertComment } = require('./comments');
 
 async function run() {
-  const token = core.getInput('token', { required: true });
+  const token = core.getInput('token');
   const ownershipFile = core.getInput('ownership-file') || '.ownership';
 
   const { context } = github;

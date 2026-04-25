@@ -1607,7 +1607,7 @@ const { matchOwnership, renderTemplate } = __nccwpck_require__(461);
 const { upsertComment } = __nccwpck_require__(432);
 
 async function run() {
-  const token = core.getInput('token', { required: true });
+  const token = core.getInput('token');
   const ownershipFile = core.getInput('ownership-file') || '.ownership';
 
   const { context } = github;
