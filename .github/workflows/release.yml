@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --repo="$GITHUB_REPOSITORY" \
+            --title="${{ github.ref_name }}" \
+            --generate-notes
+
+      - name: Move floating major tag
+        run: |
+          major=$(echo "${{ github.ref_name }}" | cut -d. -f1)
+          git tag -fa "$major" -m "Release ${{ github.ref_name }}"
+          git push origin "$major" --force

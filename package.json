@@ -1,5 +1,5 @@
 {
-  "name": "pkg-ownership",
+  "name": "ownership-guard",
   "version": "1.0.0",
   "description": "GitHub Action for cross-team ownership enforcement in monorepos",
   "main": "src/index.js",
