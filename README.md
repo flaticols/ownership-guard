@@ -11,6 +11,9 @@ on:
   pull_request:
     types: [opened, synchronize, ready_for_review]
 
+permissions:
+  pull-requests: write
+
 jobs:
   ownership:
     runs-on: ubuntu-latest
@@ -19,7 +22,7 @@ jobs:
       - uses: flaticols/ownership-guard@v2
 ```
 
-No token input needed — defaults to the built-in `GITHUB_TOKEN`.
+The `pull-requests: write` permission is required to post comments. No token input needed — defaults to the built-in `GITHUB_TOKEN`.
 
 > [!TIP]
 > For supply chain security, pin to a full commit SHA instead of a mutable tag:
