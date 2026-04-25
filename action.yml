@@ -4,7 +4,8 @@ description: Warns PR authors and mentions team members when PRs cross team owne
 inputs:
   token:
     description: GitHub token
-    required: true
+    required: false
+    default: ${{ github.token }}
   ownership-file:
     description: Path to the ownership file relative to repo root
     required: false
