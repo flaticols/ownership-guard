@@ -27,19 +27,20 @@ function tokenize(text) {
 
     if (!line) continue;
 
-    if (line.startsWith('team:')) {
-      tokens.push({ type: T.TEAM, value: line.slice(5).trim() });
-    } else if (line.startsWith('+')) {
-      tokens.push({ type: T.MEMBER, value: line.slice(1).trim() });
-    } else if (line === '=ownership:') {
-      tokens.push({ type: T.SECTION_OWNERSHIP });
-    } else if (line === '=template:') {
-      tokens.push({ type: T.SECTION_TEMPLATE });
-      templateMode = true;
-    } else if (line.startsWith('!')) {
-      tokens.push({ type: T.EXCLUDE, value: line.slice(1).trim() });
-    } else {
-      tokens.push({ type: T.PATTERN, value: line });
+    switch (line[0]) {
+      case '+':
+        tokens.push({ type: T.MEMBER, value: line.slice(1).trim() });
+        break;
+      case '=':
+        if (line === '=ownership:') tokens.push({ type: T.SECTION_OWNERSHIP });
+        else if (line === '=template:') { tokens.push({ type: T.SECTION_TEMPLATE }); templateMode = true; }
+        break;
+      case '!':
+        tokens.push({ type: T.EXCLUDE, value: line.slice(1).trim() });
+        break;
+      default:
+        if (line.startsWith('team:')) tokens.push({ type: T.TEAM, value: line.slice(5).trim() });
+        else tokens.push({ type: T.PATTERN, value: line });
     }
   }
 
