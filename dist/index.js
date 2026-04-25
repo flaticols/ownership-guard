@@ -32425,7 +32425,8 @@ const minimatch = __nccwpck_require__(3772);
 
 const DEFAULT_TEMPLATE =
   '<!-- ownership-bot: {team} -->\n' +
-  ':warning: @{members} — changes detected in `{pkg}`, owned by **{team}**. @{author}, please align with the team before merging.';
+  '> [!WARNING]\n' +
+  '> `{pkg}` is owned by **{team}**. {author}, please align with {members} before merging.';
 
 function patternRoot(pattern) {
   return pattern
