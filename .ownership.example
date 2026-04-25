@@ -1,0 +1,9 @@
+team: team fo bar baz
++flaticols
+
+team: team 2
++new-gh-user
+=ownership:
+path patter 1
+path patter 2
+!never path pattern
