@@ -85,6 +85,7 @@ If a team has no `=template:` section, a default warning is used.
 |-------|----------|---------|-------------|
 | `token` | No | `${{ github.token }}` | GitHub token |
 | `ownership-file` | No | `.ownership` | Path to the ownership file |
+| `fail-on-violation` | No | `true` | Fail the check when ownership is violated and no team member has approved. Set to `false` for comment-only mode. |
 
 ## How it works
 
