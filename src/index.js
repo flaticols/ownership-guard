@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseOwnership } = require('./parse');
 const { matchOwnership, renderTemplate } = require('./match');
-const { upsertComment } = require('./comments');
+const { upsertComment, deleteComment } = require('./comments');
 
 async function checkMembership(octokit, team, author) {
   if (team.members.includes(author)) return true;
@@ -31,7 +31,6 @@ async function hasTeamApproval(octokit, { owner, repo, prNumber }, team) {
     pull_number: prNumber,
   });
 
-  // Latest review state per reviewer (reviews are in chronological order)
   const latestByUser = new Map();
   for (const review of reviews) {
     if (review.state !== 'PENDING') {
@@ -93,28 +92,46 @@ async function run() {
   }
 
   let failed = false;
+  const summaryRows = [];
 
   for (const { team, pkgs } of matches) {
+    const marker = `<!-- ownership-bot: ${team.name} -->`;
+
     if (await checkMembership(octokit, team, author)) {
       core.info(`@${author} is a member of ${team.name} — skipping.`);
+      await deleteComment(octokit, { owner, repo, prNumber, marker });
+      summaryRows.push([team.name, pkgs.join(', '), 'Author is a team member']);
       continue;
     }
 
     if (await hasTeamApproval(octokit, { owner, repo, prNumber }, team)) {
       core.info(`Approved by a member of ${team.name} — skipping.`);
+      await deleteComment(octokit, { owner, repo, prNumber, marker });
+      summaryRows.push([team.name, pkgs.join(', '), 'Approved by team member']);
       continue;
     }
 
     const body = renderTemplate(team, { pkgs, author });
-    const marker = `<!-- ownership-bot: ${team.name} -->`;
     await upsertComment(octokit, { owner, repo, prNumber, marker, body });
+
     if (failOnViolation) {
-      core.error(`Changes in ${pkgs.join(', ')} require approval from the ${team.name} team.`);
+      for (const file of changedFiles.filter(f => pkgs.some(pkg => f.startsWith(pkg)))) {
+        core.error(`Owned by ${team.name} — approval required`, { file });
+      }
+      summaryRows.push([team.name, pkgs.join(', '), 'Approval required']);
       failed = true;
     } else {
-      core.info(`Ownership comment posted for team: ${team.name}`);
+      summaryRows.push([team.name, pkgs.join(', '), 'Comment posted']);
     }
   }
+
+  await core.summary
+    .addHeading('Ownership Check', 2)
+    .addTable([
+      [{ data: 'Team', header: true }, { data: 'Packages', header: true }, { data: 'Status', header: true }],
+      ...summaryRows,
+    ])
+    .write();
 
   if (failed) {
     core.setFailed('Ownership check failed. Request approval from the owning teams.');
