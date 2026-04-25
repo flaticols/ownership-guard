@@ -1,22 +1,22 @@
 const T = {
-  TEAM: 'TEAM',
-  MEMBER: 'MEMBER',
-  SECTION_OWNERSHIP: 'SECTION_OWNERSHIP',
-  SECTION_TEMPLATE: 'SECTION_TEMPLATE',
-  PATTERN: 'PATTERN',
-  EXCLUDE: 'EXCLUDE',
-  TEXT: 'TEXT',
+  TEAM: "TEAM",
+  MEMBER: "MEMBER",
+  SECTION_OWNERSHIP: "SECTION_OWNERSHIP",
+  SECTION_TEMPLATE: "SECTION_TEMPLATE",
+  PATTERN: "PATTERN",
+  EXCLUDE: "EXCLUDE",
+  TEXT: "TEXT",
 };
 
 function tokenize(text) {
   const tokens = [];
   let templateMode = false;
 
-  for (const rawLine of text.split('\n')) {
+  for (const rawLine of text.split("\n")) {
     const line = rawLine.trim();
 
     if (templateMode) {
-      if (line.startsWith('team:')) {
+      if (line.startsWith("team:")) {
         templateMode = false;
         tokens.push({ type: T.TEAM, value: line.slice(5).trim() });
       } else {
@@ -28,18 +28,22 @@ function tokenize(text) {
     if (!line) continue;
 
     switch (line[0]) {
-      case '+':
+      case "+":
         tokens.push({ type: T.MEMBER, value: line.slice(1).trim() });
         break;
-      case '=':
-        if (line === '=ownership:') tokens.push({ type: T.SECTION_OWNERSHIP });
-        else if (line === '=template:') { tokens.push({ type: T.SECTION_TEMPLATE }); templateMode = true; }
+      case "=":
+        if (line === "=ownership:") tokens.push({ type: T.SECTION_OWNERSHIP });
+        else if (line === "=template:") {
+          tokens.push({ type: T.SECTION_TEMPLATE });
+          templateMode = true;
+        }
         break;
-      case '!':
+      case "!":
         tokens.push({ type: T.EXCLUDE, value: line.slice(1).trim() });
         break;
       default:
-        if (line.startsWith('team:')) tokens.push({ type: T.TEAM, value: line.slice(5).trim() });
+        if (line.startsWith("team:"))
+          tokens.push({ type: T.TEAM, value: line.slice(5).trim() });
         else tokens.push({ type: T.PATTERN, value: line });
     }
   }
@@ -50,25 +54,43 @@ function tokenize(text) {
 function parse(tokens) {
   const teams = [];
   let current = null;
-  let section = 'members';
+  let section = "members";
 
   for (const tok of tokens) {
     if (tok.type === T.TEAM) {
       if (current) teams.push(finalizeTeam(current));
-      current = { name: tok.value, members: [], includePatterns: [], excludePatterns: [], templateLines: [] };
-      section = 'members';
+      current = {
+        name: tok.value,
+        members: [],
+        includePatterns: [],
+        excludePatterns: [],
+        templateLines: [],
+      };
+      section = "members";
       continue;
     }
 
     if (!current) continue;
 
     switch (tok.type) {
-      case T.SECTION_OWNERSHIP: section = 'ownership'; break;
-      case T.SECTION_TEMPLATE:  section = 'template';  break;
-      case T.MEMBER:   if (section === 'members')   current.members.push(tok.value); break;
-      case T.PATTERN:  if (section === 'ownership')  current.includePatterns.push(tok.value); break;
-      case T.EXCLUDE:  if (section === 'ownership')  current.excludePatterns.push(tok.value); break;
-      case T.TEXT:     current.templateLines.push(tok.raw); break;
+      case T.SECTION_OWNERSHIP:
+        section = "ownership";
+        break;
+      case T.SECTION_TEMPLATE:
+        section = "template";
+        break;
+      case T.MEMBER:
+        if (section === "members") current.members.push(tok.value);
+        break;
+      case T.PATTERN:
+        if (section === "ownership") current.includePatterns.push(tok.value);
+        break;
+      case T.EXCLUDE:
+        if (section === "ownership") current.excludePatterns.push(tok.value);
+        break;
+      case T.TEXT:
+        current.templateLines.push(tok.raw);
+        break;
     }
   }
 
@@ -84,7 +106,7 @@ function finalizeTeam(raw) {
     members: raw.members,
     includePatterns: raw.includePatterns,
     excludePatterns: raw.excludePatterns,
-    template: lines.length ? lines.join('\n') : null,
+    template: lines.length ? lines.join("\n") : null,
   };
 }
 
