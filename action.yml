@@ -10,6 +10,10 @@ inputs:
     description: Path to the ownership file relative to repo root
     required: false
     default: '.ownership'
+  fail-on-violation:
+    description: Fail the check when ownership is violated and no team member has approved
+    required: false
+    default: 'true'
 
 runs:
   using: node20
