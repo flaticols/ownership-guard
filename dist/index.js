@@ -32413,7 +32413,24 @@ async function upsertComment(octokit, { owner, repo, prNumber, marker, body }) {
   }
 }
 
-module.exports = { upsertComment };
+async function deleteComment(octokit, { owner, repo, prNumber, marker }) {
+  const { data: comments } = await octokit.rest.issues.listComments({
+    owner,
+    repo,
+    issue_number: prNumber,
+  });
+
+  const existing = comments.find(c => c.body && c.body.includes(marker));
+  if (existing) {
+    await octokit.rest.issues.deleteComment({
+      owner,
+      repo,
+      comment_id: existing.id,
+    });
+  }
+}
+
+module.exports = { upsertComment, deleteComment };
 
 
 /***/ }),
@@ -32656,7 +32673,7 @@ const fs = __nccwpck_require__(9896);
 const path = __nccwpck_require__(6928);
 const { parseOwnership } = __nccwpck_require__(3719);
 const { matchOwnership, renderTemplate } = __nccwpck_require__(9461);
-const { upsertComment } = __nccwpck_require__(5432);
+const { upsertComment, deleteComment } = __nccwpck_require__(5432);
 
 async function checkMembership(octokit, team, author) {
   if (team.members.includes(author)) return true;
@@ -32683,7 +32700,6 @@ async function hasTeamApproval(octokit, { owner, repo, prNumber }, team) {
     pull_number: prNumber,
   });
 
-  // Latest review state per reviewer (reviews are in chronological order)
   const latestByUser = new Map();
   for (const review of reviews) {
     if (review.state !== 'PENDING') {
@@ -32745,28 +32761,46 @@ async function run() {
   }
 
   let failed = false;
+  const summaryRows = [];
 
   for (const { team, pkgs } of matches) {
+    const marker = `<!-- ownership-bot: ${team.name} -->`;
+
     if (await checkMembership(octokit, team, author)) {
       core.info(`@${author} is a member of ${team.name} — skipping.`);
+      await deleteComment(octokit, { owner, repo, prNumber, marker });
+      summaryRows.push([team.name, pkgs.join(', '), 'Author is a team member']);
       continue;
     }
 
     if (await hasTeamApproval(octokit, { owner, repo, prNumber }, team)) {
       core.info(`Approved by a member of ${team.name} — skipping.`);
+      await deleteComment(octokit, { owner, repo, prNumber, marker });
+      summaryRows.push([team.name, pkgs.join(', '), 'Approved by team member']);
       continue;
     }
 
     const body = renderTemplate(team, { pkgs, author });
-    const marker = `<!-- ownership-bot: ${team.name} -->`;
     await upsertComment(octokit, { owner, repo, prNumber, marker, body });
+
     if (failOnViolation) {
-      core.error(`Changes in ${pkgs.join(', ')} require approval from the ${team.name} team.`);
+      for (const file of changedFiles.filter(f => pkgs.some(pkg => f.startsWith(pkg)))) {
+        core.error(`Owned by ${team.name} — approval required`, { file });
+      }
+      summaryRows.push([team.name, pkgs.join(', '), 'Approval required']);
       failed = true;
     } else {
-      core.info(`Ownership comment posted for team: ${team.name}`);
+      summaryRows.push([team.name, pkgs.join(', '), 'Comment posted']);
     }
   }
+
+  await core.summary
+    .addHeading('Ownership Check', 2)
+    .addTable([
+      [{ data: 'Team', header: true }, { data: 'Packages', header: true }, { data: 'Status', header: true }],
+      ...summaryRows,
+    ])
+    .write();
 
   if (failed) {
     core.setFailed('Ownership check failed. Request approval from the owning teams.');
