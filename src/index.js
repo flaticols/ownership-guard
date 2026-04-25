@@ -6,6 +6,24 @@ const { parseOwnership } = require('./parse');
 const { matchOwnership, renderTemplate } = require('./match');
 const { upsertComment } = require('./comments');
 
+async function checkMembership(octokit, team, author) {
+  if (team.members.includes(author)) return true;
+  for (const orgTeam of (team.orgTeams || [])) {
+    const [org, teamSlug] = orgTeam.split('/');
+    try {
+      await octokit.rest.teams.getMembershipForUserInOrg({
+        org,
+        team_slug: teamSlug,
+        username: author,
+      });
+      return true;
+    } catch {
+      // 404 = not a member
+    }
+  }
+  return false;
+}
+
 async function run() {
   const token = core.getInput('token');
   const ownershipFile = core.getInput('ownership-file') || '.ownership';
@@ -51,7 +69,7 @@ async function run() {
   }
 
   for (const { team, pkgs } of matches) {
-    if (team.members.includes(author)) {
+    if (await checkMembership(octokit, team, author)) {
       core.info(`@${author} is a member of ${team.name} — skipping.`);
       continue;
     }

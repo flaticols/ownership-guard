@@ -56,6 +56,11 @@ describe('tokenize', () => {
       { type: 'MEMBER', value: 'alice' },
     ]);
   });
+
+  test('emits ORG_TEAM token for @org/team line', () => {
+    const tokens = tokenize('team: x\n@flaticols/payments-team');
+    expect(tokens).toContainEqual({ type: 'ORG_TEAM', value: 'flaticols/payments-team' });
+  });
 });
 
 // ── parser ─────────────────────────────────────────────────────────────────
@@ -120,6 +125,17 @@ describe('parse', () => {
   test('returns empty array for empty token list', () => {
     expect(parse([])).toEqual([]);
   });
+
+  test('collects ORG_TEAM tokens into orgTeams', () => {
+    const tokens = [
+      { type: 'TEAM', value: 'payments' },
+      { type: 'MEMBER', value: 'alice' },
+      { type: 'ORG_TEAM', value: 'flaticols/payments-team' },
+    ];
+    const [team] = parse(tokens);
+    expect(team.members).toEqual(['alice']);
+    expect(team.orgTeams).toEqual(['flaticols/payments-team']);
+  });
 });
 
 // ── integration ────────────────────────────────────────────────────────────
@@ -147,6 +163,12 @@ describe('parseOwnership', () => {
   test('parses multiple teams', () => {
     const teams = parseOwnership('team: a\n+alice\n\nteam: b\n+bob');
     expect(teams).toHaveLength(2);
+  });
+
+  test('parses org team alongside individual members', () => {
+    const [team] = parseOwnership('team: payments\n+alice\n@flaticols/payments-team');
+    expect(team.members).toEqual(['alice']);
+    expect(team.orgTeams).toEqual(['flaticols/payments-team']);
   });
 
   test('returns empty array for empty input', () => {

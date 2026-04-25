@@ -3,6 +3,7 @@ const { matchOwnership, renderTemplate, patternRoot } = require('../match');
 const baseTeam = {
   name: 'payments',
   members: ['alice', 'bob'],
+  orgTeams: [],
   includePatterns: ['packages/payments/**'],
   excludePatterns: [],
   template: null,
@@ -105,5 +106,17 @@ describe('renderTemplate', () => {
     const team = { ...baseTeam, template: '{team} and {team}' };
     const result = renderTemplate(team, { pkgs: [], author: 'x' });
     expect(result).toBe('payments and payments');
+  });
+
+  test('includes org teams in {members}', () => {
+    const team = { ...baseTeam, members: ['alice'], orgTeams: ['flaticols/payments-team'], template: '{members}' };
+    const result = renderTemplate(team, { pkgs: [], author: 'x' });
+    expect(result).toBe('@alice @flaticols/payments-team');
+  });
+
+  test('{members} contains only org team when no individual members', () => {
+    const team = { ...baseTeam, members: [], orgTeams: ['flaticols/payments-team'], template: '{members}' };
+    const result = renderTemplate(team, { pkgs: [], author: 'x' });
+    expect(result).toBe('@flaticols/payments-team');
   });
 });

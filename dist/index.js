@@ -1422,7 +1422,10 @@ function matchOwnership(teams, changedFiles) {
 
 function renderTemplate(team, { pkgs, author }) {
   const template = team.template || DEFAULT_TEMPLATE;
-  const members = team.members.map(m => `@${m}`).join(' ');
+  const members = [
+    ...team.members.map(m => `@${m}`),
+    ...(team.orgTeams || []).map(t => `@${t}`),
+  ].join(' ');
   return template
     .replace(/\{team\}/g, team.name)
     .replace(/\{members\}/g, members)
@@ -1441,6 +1444,7 @@ module.exports = { matchOwnership, renderTemplate, patternRoot };
 const T = {
   TEAM: "TEAM",
   MEMBER: "MEMBER",
+  ORG_TEAM: "ORG_TEAM",
   SECTION_OWNERSHIP: "SECTION_OWNERSHIP",
   SECTION_TEMPLATE: "SECTION_TEMPLATE",
   PATTERN: "PATTERN",
@@ -1470,6 +1474,9 @@ function tokenize(text) {
     switch (line[0]) {
       case "+":
         tokens.push({ type: T.MEMBER, value: line.slice(1).trim() });
+        break;
+      case "@":
+        tokens.push({ type: T.ORG_TEAM, value: line.slice(1).trim() });
         break;
       case "=":
         if (line === "=ownership:") tokens.push({ type: T.SECTION_OWNERSHIP });
@@ -1502,6 +1509,7 @@ function parse(tokens) {
       current = {
         name: tok.value,
         members: [],
+        orgTeams: [],
         includePatterns: [],
         excludePatterns: [],
         templateLines: [],
@@ -1521,6 +1529,9 @@ function parse(tokens) {
         break;
       case T.MEMBER:
         if (section === "members") current.members.push(tok.value);
+        break;
+      case T.ORG_TEAM:
+        if (section === "members") current.orgTeams.push(tok.value);
         break;
       case T.PATTERN:
         if (section === "ownership") current.includePatterns.push(tok.value);
@@ -1544,6 +1555,7 @@ function finalizeTeam(raw) {
   return {
     name: raw.name,
     members: raw.members,
+    orgTeams: raw.orgTeams,
     includePatterns: raw.includePatterns,
     excludePatterns: raw.excludePatterns,
     template: lines.length ? lines.join("\n") : null,
@@ -1606,6 +1618,24 @@ const { parseOwnership } = __nccwpck_require__(719);
 const { matchOwnership, renderTemplate } = __nccwpck_require__(461);
 const { upsertComment } = __nccwpck_require__(432);
 
+async function checkMembership(octokit, team, author) {
+  if (team.members.includes(author)) return true;
+  for (const orgTeam of (team.orgTeams || [])) {
+    const [org, teamSlug] = orgTeam.split('/');
+    try {
+      await octokit.rest.teams.getMembershipForUserInOrg({
+        org,
+        team_slug: teamSlug,
+        username: author,
+      });
+      return true;
+    } catch {
+      // 404 = not a member
+    }
+  }
+  return false;
+}
+
 async function run() {
   const token = core.getInput('token');
   const ownershipFile = core.getInput('ownership-file') || '.ownership';
@@ -1651,7 +1681,7 @@ async function run() {
   }
 
   for (const { team, pkgs } of matches) {
-    if (team.members.includes(author)) {
+    if (await checkMembership(octokit, team, author)) {
       core.info(`@${author} is a member of ${team.name} — skipping.`);
       continue;
     }

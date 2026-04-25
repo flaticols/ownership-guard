@@ -38,7 +38,10 @@ function matchOwnership(teams, changedFiles) {
 
 function renderTemplate(team, { pkgs, author }) {
   const template = team.template || DEFAULT_TEMPLATE;
-  const members = team.members.map(m => `@${m}`).join(' ');
+  const members = [
+    ...team.members.map(m => `@${m}`),
+    ...(team.orgTeams || []).map(t => `@${t}`),
+  ].join(' ');
   return template
     .replace(/\{team\}/g, team.name)
     .replace(/\{members\}/g, members)
