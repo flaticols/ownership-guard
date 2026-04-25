@@ -4,7 +4,7 @@
   "description": "GitHub Action for cross-team ownership enforcement in monorepos",
   "main": "src/index.js",
   "scripts": {
-    "build": "ncc build src/index.js -o dist",
+    "build": "ncc build src/index.js -o dist -e @actions/core -e @actions/github",
     "test": "jest"
   },
   "keywords": [],

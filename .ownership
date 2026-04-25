@@ -1,0 +1,9 @@
+team: team-foo
++flaticols
+
+=ownership:
+path/to/package/**
+
+=template:
+<!-- ownership-bot: {team} -->
+:warning: @{members} — `{pkg}` belongs to **{team}**. @{author} is crossing a team boundary, please align first.
