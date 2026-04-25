@@ -1,15 +1,14 @@
-name: Hello World
-description: Greet someone and record the time
+name: Package Ownership
+description: Warns PR authors and mentions team members when PRs cross team ownership boundaries
 
 inputs:
-  who-to-greet: # id of input
-    description: Who to greet
+  token:
+    description: GitHub token
     required: true
-    default: World
-
-outputs:
-  time: # id of output
-    description: The time we greeted you
+  ownership-file:
+    description: Path to the ownership file relative to repo root
+    required: false
+    default: '.ownership'
 
 runs:
   using: node20
