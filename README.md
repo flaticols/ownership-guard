@@ -94,6 +94,10 @@ If a team has no `=template:` section, a default warning is used.
 3. For each team whose patterns match: skips if the PR author is a direct member or belongs to any listed org team, otherwise upserts a comment mentioning the team
 4. If no patterns match any changed file, exits silently
 
+## Example
+
+<img width="920" height="775" alt="image" src="https://github.com/user-attachments/assets/8a21ca87-604b-43d8-993d-67914ec0da91" />
+
 ## License
 
 MIT
